@@ -30,7 +30,9 @@ CANSparkMax left1 =new CANSparkMax(1, MotorType.kBrushless);
 CANSparkMax left2 =new CANSparkMax(2, MotorType.kBrushless);
 
 CANSparkMax right1 =new CANSparkMax(3, MotorType.kBrushless);
-CANSparkMax right2 =new CANSparkMax(4, MotorType.kBrushless); 
+CANSparkMax right2 =new CANSparkMax(4, MotorType.kBrushless);
+private Object m_timer;
+private DifferentialDrive m_robotDrive; 
 
 
   @Override
@@ -73,5 +75,24 @@ x =0;
        }
    left1.set(y+x);
    right1.set(y-x);
+  }
+
+  /** This function is run once each time the robot enters autonomous mode. */
+  @Override
+  public void autonomousInit() {
+    m_timer.reset();
+    m_timer.start();
+  }
+
+  /** This function is called periodically during autonomous. */
+  @Override
+  public void autonomousPeriodic() {
+    // Drive for 2 seconds
+    if (m_timer.get() < 2.0) {
+      // Drive forwards half speed, make sure to turn input squaring off
+      m_robotDrive.arcadeDrive(0.5, 0.0, false);
+    } else {
+      m_robotDrive.stopMotor(); // stop robot
+    }
   }
 }
