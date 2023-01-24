@@ -55,7 +55,23 @@ CANSparkMax right2 =new CANSparkMax(4, MotorType.kBrushless);
   public void teleopPeriodic() {
    // m_myRobot.tankDrive(-m_leftStick.getY(), -m_rightStick.getY());
 
-   left1.set(-driver1.getLeftY()+driver1.getRightX());
-   right1.set(-driver1.getLeftY()-driver1.getRightX());
+
+   double x = driver1.getRightX();
+   double y = -driver1.getLeftY();
+double range=0.2;
+
+   if (x <range || x>-range){
+x =0;
+   } else {
+//x = (0.2-driver1.getRightX())/0.8
+   }
+
+   if (y <range || y>-range){
+    y =0;
+       } else {
+    //x = (0.2-driver1.getRightX())/0.8
+       }
+   left1.set(y+x);
+   right1.set(y-x);
   }
 }
