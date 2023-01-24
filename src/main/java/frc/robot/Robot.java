@@ -5,14 +5,18 @@
 package frc.robot;
 
 import com.revrobotics.CANSparkMax;
+import com.revrobotics.RelativeEncoder;
+import com.revrobotics.SparkMaxAbsoluteEncoder;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorController;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * This is a demo program showing the use of the DifferentialDrive class, specifically it contains
@@ -31,6 +35,12 @@ CANSparkMax left2=new CANSparkMax(2, MotorType.kBrushless);
 CANSparkMax right1=new CANSparkMax(3, MotorType.kBrushless);
 CANSparkMax right2=new CANSparkMax(4, MotorType.kBrushless);
 
+RelativeEncoder left1_encoder = left1.getEncoder();
+RelativeEncoder right1_encoder = right1.getEncoder();
+
+Timer m_timer = new Timer();
+
+double Kspeed;
   @Override
   public void robotInit() {
     // We need to invert one side of the drivetrain so that positive voltages
@@ -56,21 +66,38 @@ left1.set(-driver1.getLeftY()+driver1.getRightX());
 right1.set(-driver1.getLeftY()-driver1.getRightX());
   }
 
-  @Override
-  public void autonomousInit() {
+  
+  
 
+/** This function is run once each time the robot enters autonomous mode. */
+@Override
+public void autonomousInit() {
 
+  m_timer.reset();
+  m_timer.start();
+}
 
-    
-  }
-
+/** This function is called periodically during autonomous. */
 @Override
 public void autonomousPeriodic() {
+  SmartDashboard.putNumber("Left Drive Encoder", left1_encoder.getPosition());
+    SmartDashboard.putNumber("Right Drive Encoder", right1_encoder.getPosition());
+  SmartDashboard.putNumber("Timer:",m_timer.get());
+  
+
+  // Drive for 2 seconds
+  if (m_timer.get() <1.5) {
+    Kspeed=0.2;
+  } else {
+    Kspeed=0;
+  }
 
 
-
-
+  right1.set(Kspeed);
+  left1.set(Kspeed);
+  
 }
+
 
 
 
