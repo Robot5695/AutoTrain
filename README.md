@@ -1,3 +1,3 @@
 # AutoTrain
 Github is REALLY confusing
-This is working
+This is working (kinda)
