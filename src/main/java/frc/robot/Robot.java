@@ -9,10 +9,12 @@ import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorController;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 
 /**
  * This is a demo program showing the use of the DifferentialDrive class, specifically it contains
@@ -32,7 +34,7 @@ CANSparkMax left2 =new CANSparkMax(2, MotorType.kBrushless);
 
 CANSparkMax right1 =new CANSparkMax(3, MotorType.kBrushless);
 CANSparkMax right2 =new CANSparkMax(4, MotorType.kBrushless);
-private Object m_timer;
+private Timer m_timer;
 private DifferentialDrive m_robotDrive; 
 
 
@@ -63,13 +65,13 @@ private DifferentialDrive m_robotDrive;
    double y = -driver1.getLeftY();
 double range=0.2;
 
-   if (x <range || x>-range){
+   if (x <range && x>-range){
 x =0;
    } else {
 //x = (0.2-driver1.getRightX())/0.8
    }
 
-   if (y <range || y>-range){
+   if (y <range && y>-range){
     y =0;
        } else {
     //x = (0.2-driver1.getRightX())/0.8
@@ -87,13 +89,12 @@ x =0;
 
   }
 
-  /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    // Drive for 2 seconds
-    if (((CANSparkMax) m_timer).get() < 2.0) {
-      // Drive forwards half speed, make sure to turn input squaring off
-      m_robotDrive.arcadeDrive(0.5, 0.0, false);
+    // Timed Drive
+    if (m_timer.get() < 2.0) { 
+      // Drive Speed
+      m_robotDrive.arcadeDrive(0.2, 0.0, false);
     } else {
       m_robotDrive.stopMotor(); // stop robot
     }
