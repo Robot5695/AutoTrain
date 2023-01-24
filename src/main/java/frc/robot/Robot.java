@@ -18,7 +18,8 @@ import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
  * This is a demo program showing the use of the DifferentialDrive class, specifically it contains
  * the code necessary to operate a robot with tank drive.
  */
-public class Robot extends TimedRobot {
+public class Robot extends TimedRobot
+  {
   //private DifferentialDrive m_myRobot;
  // private Joystick m_leftStick;
  // private Joystick m_rightStick;
@@ -82,13 +83,15 @@ x =0;
   public void autonomousInit() {
     m_timer.reset();
     m_timer.start();
+
+
   }
 
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
     // Drive for 2 seconds
-    if (m_timer.get() < 2.0) {
+    if (((CANSparkMax) m_timer).get() < 2.0) {
       // Drive forwards half speed, make sure to turn input squaring off
       m_robotDrive.arcadeDrive(0.5, 0.0, false);
     } else {
