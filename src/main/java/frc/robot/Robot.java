@@ -104,6 +104,7 @@ private final SendableChooser<String> m_chooser = new SendableChooser<>();
 double Kspeed;
   @Override
   public void robotInit() {
+    CameraServer.startAutomaticCapture();
    left1=new CANSparkMax(1, MotorType.kBrushless);
    left2=new CANSparkMax(2, MotorType.kBrushless);
    right1=new CANSparkMax(3, MotorType.kBrushless);
@@ -142,9 +143,17 @@ SmartDashboard.putNumber("arm_encoder", arm_Encoder.getPosition());
 
 //m_myRobot = new DifferentialDrive(m_leftMotor, m_rightMotor);
    // m_leftStick = new Joystick(0);
-   //m_rightStick = new Joystick(1);
+   //m_rightStick = new Joystick(1)
+ //Camera streamers 1
    driver1=new XboxController(0);
-  }//end of robotinit
+   camera1 = CameraServer.startAutomaticCapture(0);
+    camera2 = CameraServer.startAutomaticCapture(1);
+    server = CameraServer.getServer();
+
+    camera1.setConnectionStrategy(ConnectionStrategy.kKeepOpen);
+    camera2.setConnectionStrategy(ConnectionStrategy.kKeepOpen);
+}
+  //end of robotinit
 
 @Override    
 public void teleopInit(){
@@ -248,7 +257,16 @@ SmartDashboard.putNumber("X", imu.getAccelX());
 SmartDashboard.putNumber("Y", imu.getAccelY());
 SmartDashboard.putNumber("Z", imu.getAccelZ());
 SmartDashboard.putNumber("arm_encoder", arm_Encoder.getPosition());
-}// end of teleopPeriodic
+//Camera streamers 2
+//if (driver1.getRightBumperPressed()) {
+  //System.out.println("Setting camera 2");
+  //server.setSource(camera2);
+} //else if (driver1.getRightBumperReleased()) {
+// System.out.println("Setting camera 1");
+  //server.setSource(camera1);
+//}
+//}
+// end of teleopPeriodic
 
 @Override
 public void teleopExit(){
