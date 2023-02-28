@@ -2,65 +2,29 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-
-
-
-
-
-
-
-
 package frc.robot;
 
-
-import edu.wpi.first.cameraserver.CameraServer;
-import edu.wpi.first.cscore.CvSink;
-import edu.wpi.first.cscore.CvSource;
-import edu.wpi.first.cscore.UsbCamera;
-import edu.wpi.first.cscore.VideoSink;
-import edu.wpi.first.cscore.VideoSource.ConnectionStrategy;
-import edu.wpi.first.wpilibj.TimedRobot;
-import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
-import org.opencv.imgproc.Imgproc;
-
-
 import com.revrobotics.CANSparkMax;
+
+
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkMaxAbsoluteEncoder;
+import com.revrobotics.SparkMaxPIDController;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
-
-
-
 import edu.wpi.first.cameraserver.CameraServer;
-import edu.wpi.first.networktables.DoubleEntry;
-import edu.wpi.first.networktables.GenericEntry;
-import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.PneumaticsModuleType;
-import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
-import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorController;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
-
-
-
 
 /**
  * This is a demo program showing the use of the DifferentialDrive class, specifically it contains
@@ -71,77 +35,36 @@ public class Robot extends TimedRobot {
  // private Joystick m_leftStick;
   //private Joystick m_rightStick;
 
-
-
-
   //private final MotorController m_leftMotor = new PWMSparkMax(0);
   //private final MotorController m_rightMotor = new PWMSparkMax(1);
+XboxController driver1, driver2;
+CANSparkMax left1=new CANSparkMax(1, MotorType.kBrushless);
+CANSparkMax left2=new CANSparkMax(2, MotorType.kBrushless);
+CANSparkMax right1=new CANSparkMax(3, MotorType.kBrushless);
+CANSparkMax right2=new CANSparkMax(4, MotorType.kBrushless);
+CANSparkMax arm1; 
+CANSparkMax extender;
+RelativeEncoder armEncoder;
+RelativeEncoder extenderEncoder;
+ private ADIS16470_IMU imu = new ADIS16470_IMU();
 
 
-
-
-XboxController driver1;
-
-
- private int armtarget;
-
-
-CANSparkMax left1;
-CANSparkMax left2;
-CANSparkMax right1;
-CANSparkMax right2;
- CANSparkMax arm1;
- CANSparkMax arm2 ;
-
-
- private ADIS16470_IMU imu;
-
-
-UsbCamera camera1;
-UsbCamera camera2;
-VideoSink server;
-
-
-
-
-
-
-
-
-
-
-
-
-RelativeEncoder left1_encoder;
-RelativeEncoder right1_encoder;
-RelativeEncoder arm_Encoder;
-
+RelativeEncoder left1_encoder = left1.getEncoder();
+RelativeEncoder right1_encoder = right1.getEncoder();
 
 Timer m_timer = new Timer();
 private static final String moveauto = "moveauto";
 private static final String parkramp = "parkramp";
 private String m_autoSelected;
 private final SendableChooser<String> m_chooser = new SendableChooser<>();
-
-
+private SparkMaxPIDController m_pidController;
+private SparkMaxPIDController m_pidExtender;
+public double kP, kI, kD, kIz, kFF, kMaxOutput, kMinOutput, rotations, extenderrotations;
 
 
 double Kspeed;
   @Override
   public void robotInit() {
-   left1=new CANSparkMax(1, MotorType.kBrushless);
-   left2=new CANSparkMax(2, MotorType.kBrushless);
-   right1=new CANSparkMax(3, MotorType.kBrushless);
-   right2=new CANSparkMax(4, MotorType.kBrushless);
-   arm1=new CANSparkMax(5, MotorType.kBrushless);
-   arm2=new CANSparkMax(6, MotorType.kBrushless);
-   
-    imu = new ADIS16470_IMU();
-   
- left1_encoder = left1.getEncoder();
- right1_encoder = right1.getEncoder();
- arm_Encoder = arm1.getEncoder();
-
     // We need to invert one side of the drivetrain so that positive voltages
     // result in both sides moving forward. Depending on how your robot's
     // gearbox is constructed, you might have to invert the left side instead.
@@ -150,113 +73,74 @@ double Kspeed;
     right2.setInverted(true);
 right2.follow(right1);
 left2.follow(left1);
-arm2.setInverted(true);
-arm2.follow(arm1);
-
-
-armtarget=0;
-
 
 imu.calibrate();
 m_chooser.setDefaultOption("parkramp", parkramp);
 m_chooser.addOption("moveauto", moveauto);
 SmartDashboard.putData("Auto choices", m_chooser);
-SmartDashboard.putNumber("arm_encoder", arm_Encoder.getPosition());
-
-
-
-
-//m_myRobot = new DifferentialDrive(m_leftMotor, m_rightMotor);
+    //m_myRobot = new DifferentialDrive(m_leftMotor, m_rightMotor);
    // m_leftStick = new Joystick(0);
    //m_rightStick = new Joystick(1);
    driver1=new XboxController(0);
-  }//end of robotinit
+   driver2=new XboxController(1);
 
+   arm1=new CANSparkMax(5, MotorType.kBrushless);
+   extender=new CANSparkMax(6, MotorType.kBrushless);
+   extender.setInverted(true);
+   armEncoder=arm1.getEncoder();
+   extenderEncoder=extender.getEncoder();
+   m_pidController=arm1.getPIDController();
+   m_pidExtender=extender.getPIDController();
+   kP = 0.1; 
+    kI = 1e-4;
+    kD = 1; 
+    kIz = 0; 
+    kFF = 0; 
+    kMaxOutput = 1; 
+    kMinOutput = -1;
 
-@Override
-public void teleopInit(){
-  SmartDashboard.putNumber("Deadzone", 0.2);
-  SmartDashboard.putNumber("Xskrenth", 0.5);
-  SmartDashboard.putNumber("Yskrenth", 0.5);
-  arm_Encoder.setPosition(0);
-  arm1.setIdleMode(IdleMode.kBrake);
-arm2.setIdleMode(IdleMode.kBrake);
-armtarget=0;
+    // set PID coefficients
+    m_pidController.setP(kP);
+    m_pidController.setI(kI);
+    m_pidController.setD(kD);
+    m_pidController.setIZone(kIz);
+    m_pidController.setFF(kFF);
+    m_pidController.setOutputRange(kMinOutput, kMaxOutput);
 
-exampleSolenoidPH = new DoubleSolenoid(PneumaticsModuleType.REVPH, 8,9);
+    m_pidExtender.setP(kP);
+    m_pidExtender.setI(kI);
+    m_pidExtender.setD(kD);
+    m_pidExtender.setIZone(kIz);
+    m_pidExtender.setFF(kFF);
+    m_pidExtender.setOutputRange(kMinOutput, kMaxOutput);
 
-
-
-
-}// end of teleopInit
-
-
-
-
+    // display PID coefficients on SmartDashboard
+    SmartDashboard.putNumber("P Gain", kP);
+    SmartDashboard.putNumber("I Gain", kI);
+    SmartDashboard.putNumber("D Gain", kD);
+    SmartDashboard.putNumber("I Zone", kIz);
+    SmartDashboard.putNumber("Feed Forward", kFF);
+    SmartDashboard.putNumber("Max Output", kMaxOutput);
+    SmartDashboard.putNumber("Min Output", kMinOutput);
+    SmartDashboard.putNumber("Set Rotations", 0);
+  }
 
 
   @Override
   public void teleopPeriodic() {
-   
-    
-   
-    // m_myRobot.tankDrive(-m_leftStick.getY(), -m_rightStick.getY());
-   double Yskrenth = SmartDashboard.getNumber("Yskrenth", 0.5);
-   double Xskrenth = SmartDashboard.getNumber("Xskrenth", 0.5);
-   double x = Xskrenth* driver1.getRightX();
-   double y = -Yskrenth* driver1.getLeftY();
-   
-   double deadZone = SmartDashboard.getNumber("Deadzone", 0.2);
- if (x < deadZone && x > -deadZone ) {
+   // m_myRobot.tankDrive(-m_leftStick.getY(), -m_rightStick.getY());
+
+   double x = driver1.getRightX();
+   double y = -driver1.getLeftY();
+ if (x < 0.25 && x > -0.25) {
   x = 0;
  }
- if (y < deadZone && y > -deadZone ) {
+ if (y < 0.25 && y > -0.25) {
   y = 0;
  }
-
-
-SmartDashboard.putNumber("POV", driver1.getPOV());
-if (driver1.getPOV()== 270){
-
-
-x = -0.05;
-}
-else if (driver1.getPOV()== 90){
-x = 0.05;
-}
-
-
 left1.set(y + x);
 right1.set(y - x);
 
-
-//arm pid control
-
-double error=armtarget-arm_Encoder.getPosition();
-double p= SmartDashboard.getNumber("P", .01);
-arm1.set(error*p);
-SmartDashboard.putNumber("error", error);
-
-
-
-if (driver1.getLeftBumper()) {
-
-
-left1.setIdleMode(IdleMode.kBrake);
-left2.setIdleMode(IdleMode.kBrake);
-right1.setIdleMode(IdleMode.kBrake);
-right2.setIdleMode(IdleMode.kBrake);
-}
-else {
-
-
-left1.setIdleMode(IdleMode.kCoast);
-left2.setIdleMode(IdleMode.kCoast);
-right1.setIdleMode(IdleMode.kCoast);
-right2.setIdleMode(IdleMode.kCoast);
-
-
-}
 SmartDashboard.putNumber("Left Drive Encoder", left1_encoder.getPosition());
 SmartDashboard.putNumber("Right Drive Encoder", right1_encoder.getPosition());
 SmartDashboard.putNumber("Timer:",m_timer.get());
@@ -264,29 +148,14 @@ SmartDashboard.putNumber("angle", imu.getAngle());
 SmartDashboard.putNumber("X", imu.getAccelX());
 SmartDashboard.putNumber("Y", imu.getAccelY());
 SmartDashboard.putNumber("Z", imu.getAccelZ());
-SmartDashboard.putNumber("arm_encoder", arm_Encoder.getPosition());
-}// end of teleopPeriodic
+  }
 
-
-@Override
-public void teleopExit(){
-SmartDashboard.clearPersistent("Deadzone");
-
-if (driver1.getAButton()) {
-  exampleSolenoidPH.set(Value.kForward);
-} else {
-exampleSolenoidPH.set(Value.kReverse);
-}
-
-}
-
+  
+  
 
 /** This function is run once each time the robot enters autonomous mode. */
 @Override
 public void autonomousInit() {
-
-
-
 
   m_timer.reset();
   m_timer.start();
@@ -295,9 +164,6 @@ public void autonomousInit() {
   left1_encoder.setPosition(0);
   right1_encoder.setPosition(0);
 }
-
-
-
 
 /** This function is called periodically during autonomous. */
 @Override
@@ -312,35 +178,30 @@ public void autonomousPeriodic() {
   }
 
 
-
   right1.set(Kspeed);
   left1.set(Kspeed);
-  break;//end of move auto
+  break;
   case parkramp:
-
-
+int parkrampstate = 0;
 double slow_speed = 0.05;
 right1.set(slow_speed);
-left1.set(slow_speed);
+left1.set(slow_speed); 
 System.out.println ("here");
 //distance to top of hill is ~ 38
-if (left1_encoder.getPosition()<38) {
+while (left1_encoder.getPosition()<38) {
 //do nothing
 SmartDashboard.putNumber("Y", imu.getAccelY());
 SmartDashboard.putNumber("Left Drive Encoder", left1_encoder.getPosition());
 SmartDashboard.putNumber("Right Drive Encoder", right1_encoder.getPosition());
 }
-else {
+while (true) {
   SmartDashboard.putNumber("Y", imu.getAccelY());
   SmartDashboard.putNumber("Left Drive Encoder", left1_encoder.getPosition());
   SmartDashboard.putNumber("Right Drive Encoder", right1_encoder.getPosition());
 if (imu.getAccelY()<-2){
-//Uphill
+//Uphill 
 right1.set(slow_speed);
 left1.set(slow_speed);
-
-
-
 
 }
 else if (imu.getAccelY()>2){
@@ -348,68 +209,146 @@ else if (imu.getAccelY()>2){
 right1.set(-slow_speed);
 left1.set(-slow_speed);
 
-
-
-
 }
 else {
-  //flat
-  right1.set(0);
-  left1.set(0);
-  right1.setIdleMode(IdleMode.kBrake);
-  right2.setIdleMode(IdleMode.kBrake);
-  left1.setIdleMode(IdleMode.kBrake);
-  left2.setIdleMode(IdleMode.kBrake);
+//flat
+right1.set(0);
+left1.set(0);
+right1.setIdleMode(IdleMode.kBrake);
+right2.setIdleMode(IdleMode.kBrake);
+left1.setIdleMode(IdleMode.kBrake);
+left2.setIdleMode(IdleMode.kBrake);
+}
+
+}
+
+  //break;
 }
 }
 
+@Override 
+public void testInit (){
 
+armEncoder.setPosition(0);
+rotations = armEncoder.getPosition();
+arm1.setSmartCurrentLimit(35);
+arm1.setIdleMode(IdleMode.kBrake);
 
-
-
-
-//two new motor controllers
-
-
-
-
-
-
-  break;//end of parkramp
-}//end of switch statment for auto selection
-}//end of autonomous periodic
-
-
-DoubleSolenoid exampleSolenoidPH;
-
-
-
+extenderEncoder.setPosition(0);
+extenderrotations=extenderEncoder.getPosition();
+extender.setSmartCurrentLimit(19);
+extender.setIdleMode(IdleMode.kBrake);
+}
 
 @Override
-public void testInit() {
-    // TODO Auto-generated method stub
-    super.testInit();
-    exampleSolenoidPH = new DoubleSolenoid(PneumaticsModuleType.REVPH, 8,9);
+public void testPeriodic (){
+
+      // read PID coefficients from SmartDashboard
+      //double p = SmartDashboard.getNumber("P Gain", 0);
+      //double i = SmartDashboard.getNumber("I Gain", 0);
+      //double d = SmartDashboard.getNumber("D Gain", 0);
+      //double iz = SmartDashboard.getNumber("I Zone", 0);
+      //double ff = SmartDashboard.getNumber("Feed Forward", 0);
+      //double max = SmartDashboard.getNumber("Max Output", 0);
+      //double min = SmartDashboard.getNumber("Min Output", 0);
+      //double rotations = SmartDashboard.getNumber("Set Rotations", 0);
+      
+      // if PID coefficients on SmartDashboard have changed, write new values to controller
+      /* 
+      if((p != kP)) { m_pidController.setP(p); kP = p; }
+      if((i != kI)) { m_pidController.setI(i); kI = i; }
+      if((d != kD)) { m_pidController.setD(d); kD = d; }
+      if((iz != kIz)) { m_pidController.setIZone(iz); kIz = iz; }
+      if((ff != kFF)) { m_pidController.setFF(ff); kFF = ff; }
+      if((max != kMaxOutput) || (min != kMinOutput)) { 
+        m_pidController.setOutputRange(min, max); 
+        kMinOutput = min; kMaxOutput = max; 
+      }
+      */
+  
+      /*
+       * This code raises the arm by subtracting from the arm position
+       * or lowers the arm by adding to the arm position
+       * P,I,D values should not be changed while the program is running
+       * 
+       */
+      /*
+      if(driver1.getAButton()){
+rotations+=0.01;
+      }else if(driver1.getBButton()){
+rotations-=0.01;
+      }  
+      */
+      
+      
+      
+/*
+ * This code controls the arm with the left stick up/down
+ */
+
+if(Math.abs(driver2.getLeftY())>0.2){
+  rotations=rotations+driver2.getLeftY()*0.04;
+} 
+
+/*
+ * set limits on range of arm motion
+ */
+if(rotations<0){
+  rotations=0;
+}
+if(rotations>5){
+  rotations=5;
+}
+/*
+ * This code controls the extender with the left stick up/down
+ */
+
+ if(Math.abs(driver2.getRightY())>0.2){
+  extenderrotations=extenderrotations+driver2.getRightY()*0.16;
+} 
+
+/*
+ * set limits on range of extender motion
+ */
+if(extenderrotations<0){
+  extenderrotations=0;
+}
+if(extenderrotations>75){
+  extenderrotations=75;
+  //MUST MATCH THE ABOVE NUMBER
+}
+
+      /**
+       * PIDController objects are commanded to a set point using the 
+       * SetReference() method.
+       * 
+       * The first parameter is the value of the set point, whose units vary
+       * depending on the control type set in the second parameter.
+       * 
+       * The second parameter is the control type can be set to one of four 
+       * parameters:
+       *  com.revrobotics.CANSparkMax.ControlType.kDutyCycle
+       *  com.revrobotics.CANSparkMax.ControlType.kPosition
+       *  com.revrobotics.CANSparkMax.ControlType.kVelocity
+       *  com.revrobotics.CANSparkMax.ControlType.kVoltage
+       */
+      m_pidController.setReference(rotations, CANSparkMax.ControlType.kPosition);
+      
+      SmartDashboard.putNumber("SetPoint", rotations);
+      SmartDashboard.putNumber("Arm Position", armEncoder.getPosition());
+
+      SmartDashboard.putNumber("extSetPoint", extenderrotations);
+      SmartDashboard.putNumber("Extender Position", extenderEncoder.getPosition());
+      m_pidExtender.setReference(extenderrotations, CANSparkMax.ControlType.kPosition);
+      
+
 }
 
 
-@Override
-public void testPeriodic() {
-    // TODO Auto-generated method stub
-    super.testPeriodic();
-    if (driver1.getAButton()) {
-        exampleSolenoidPH.set(Value.kForward);
-    } else {
- exampleSolenoidPH.set(Value.kReverse);
-    }
- 
-}
-@Override
-public void testExit() {
-    // TODO Auto-generated method stub
-    super.testExit();
-    exampleSolenoidPH.close();
-}
-}//end of timed robot class
 
 
+
+
+
+
+}
