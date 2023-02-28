@@ -5,6 +5,17 @@
 
 package frc.robot;
 
+import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.cscore.CvSink;
+import edu.wpi.first.cscore.CvSource;
+import edu.wpi.first.cscore.UsbCamera;
+import edu.wpi.first.cscore.VideoSink;
+import edu.wpi.first.cscore.VideoSource.ConnectionStrategy;
+import edu.wpi.first.wpilibj.TimedRobot;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
 
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
@@ -18,10 +29,14 @@ import edu.wpi.first.networktables.DoubleEntry;
 import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.PneumaticsModuleType;
+import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorController;
@@ -43,29 +58,36 @@ public class Robot extends TimedRobot {
  // private Joystick m_leftStick;
   //private Joystick m_rightStick;
 
-
+  DoubleSolenoid exampleSolenoidPH;
   //private final MotorController m_leftMotor = new PWMSparkMax(0);
   //private final MotorController m_rightMotor = new PWMSparkMax(1);
 
 
 XboxController driver1;
 
- 
+ private int armtarget;
 
-CANSparkMax left1=new CANSparkMax(1, MotorType.kBrushless);
-CANSparkMax left2=new CANSparkMax(2, MotorType.kBrushless);
-CANSparkMax right1=new CANSparkMax(3, MotorType.kBrushless);
-CANSparkMax right2=new CANSparkMax(4, MotorType.kBrushless);
+CANSparkMax left1;
+CANSparkMax left2;
+CANSparkMax right1;
+CANSparkMax right2;
+ CANSparkMax arm1;
+ CANSparkMax arm2 ;
+
+ private ADIS16470_IMU imu;
+
+UsbCamera camera1;
+UsbCamera camera2;
+VideoSink server;
+
+private final MotorController lightstrip = new PWMSparkMax(10);
+
+private double lightvalue;
 
 
- private ADIS16470_IMU imu = new ADIS16470_IMU();
-
-
-
-
-RelativeEncoder left1_encoder = left1.getEncoder();
-RelativeEncoder right1_encoder = right1.getEncoder();
-
+RelativeEncoder left1_encoder;
+RelativeEncoder right1_encoder;
+RelativeEncoder arm_Encoder;
 
 Timer m_timer = new Timer();
 private static final String moveauto = "moveauto";
@@ -82,6 +104,22 @@ private final SendableChooser<String> m_chooser = new SendableChooser<>();
 double Kspeed;
   @Override
   public void robotInit() {
+   left1=new CANSparkMax(1, MotorType.kBrushless);
+   left2=new CANSparkMax(2, MotorType.kBrushless);
+   right1=new CANSparkMax(3, MotorType.kBrushless);
+   right2=new CANSparkMax(4, MotorType.kBrushless);
+   arm1=new CANSparkMax(5, MotorType.kBrushless);
+   arm2=new CANSparkMax(6, MotorType.kBrushless);
+    
+    imu = new ADIS16470_IMU();
+    
+ left1_encoder = left1.getEncoder();
+ right1_encoder = right1.getEncoder();
+ arm_Encoder = arm1.getEncoder();
+
+
+
+lightvalue = .99;
     // We need to invert one side of the drivetrain so that positive voltages
     // result in both sides moving forward. Depending on how your robot's
     // gearbox is constructed, you might have to invert the left side instead.
@@ -90,12 +128,17 @@ double Kspeed;
     right2.setInverted(true);
 right2.follow(right1);
 left2.follow(left1);
+arm2.setInverted(true);
+arm2.follow(arm1);
 
+armtarget=0;
 
 imu.calibrate();
 m_chooser.setDefaultOption("parkramp", parkramp);
 m_chooser.addOption("moveauto", moveauto);
 SmartDashboard.putData("Auto choices", m_chooser);
+SmartDashboard.putNumber("arm_encoder", arm_Encoder.getPosition());
+
 
 //m_myRobot = new DifferentialDrive(m_leftMotor, m_rightMotor);
    // m_leftStick = new Joystick(0);
@@ -103,19 +146,36 @@ SmartDashboard.putData("Auto choices", m_chooser);
    driver1=new XboxController(0);
   }//end of robotinit
 
-@Override
+@Override    
 public void teleopInit(){
   SmartDashboard.putNumber("Deadzone", 0.2);
   SmartDashboard.putNumber("Xskrenth", 0.5);
   SmartDashboard.putNumber("Yskrenth", 0.5);
+  SmartDashboard.putNumber("lightvalue", 0);
+  lightvalue=0.99;
+  arm_Encoder.setPosition(0);
+  arm1.setIdleMode(IdleMode.kBrake);
+arm2.setIdleMode(IdleMode.kBrake);
+armtarget=0;
 
+exampleSolenoidPH = new DoubleSolenoid(PneumaticsModuleType.REVPH, 8,9);
 }// end of teleopInit
 
 
 
   @Override
   public void teleopPeriodic() {
-   // m_myRobot.tankDrive(-m_leftStick.getY(), -m_rightStick.getY());
+   
+   
+   
+    if (driver1.getAButton()) {
+      exampleSolenoidPH.set(Value.kForward);
+  } else {
+exampleSolenoidPH.set(Value.kReverse);
+  } 
+  
+   
+    // m_myRobot.tankDrive(-m_leftStick.getY(), -m_rightStick.getY());
    double Yskrenth = SmartDashboard.getNumber("Yskrenth", 0.5);
 double Xskrenth = SmartDashboard.getNumber("Xskrenth", 0.5);
    double x = Xskrenth* driver1.getRightX();
@@ -140,6 +200,27 @@ x = 0.05;
 
 left1.set(y + x);
 right1.set(y - x);
+
+//arm pid control
+
+
+lightstrip.set(lightvalue);
+
+
+if(driver1.getXButton()){
+  lightvalue=0.9; //That's purple
+}else if (driver1.getYButton()){
+  lightvalue=0.69; //That's yellow (not gold)
+}
+else if (driver1.getBButton()){
+  lightvalue=0.99;
+}
+
+
+double error=armtarget-arm_Encoder.getPosition();
+double p= SmartDashboard.getNumber("P", .01);
+arm1.set(error*p);
+SmartDashboard.putNumber("error", error);
 
 
 
@@ -166,7 +247,7 @@ SmartDashboard.putNumber("angle", imu.getAngle());
 SmartDashboard.putNumber("X", imu.getAccelX());
 SmartDashboard.putNumber("Y", imu.getAccelY());
 SmartDashboard.putNumber("Z", imu.getAccelZ());
- 
+SmartDashboard.putNumber("arm_encoder", arm_Encoder.getPosition());
 }// end of teleopPeriodic
 
 @Override
@@ -253,7 +334,7 @@ else {
 
 
 
-
+//two new motor controllers
 
 
 
@@ -261,4 +342,31 @@ else {
 }//end of switch statment for auto selection
 }//end of autonomous periodic
 
+
+
+
+//* @Override
+//public void testInit() {
+    // TODO Auto-generated method stub
+    //super.testInit();
+  //  exampleSolenoidPH = new DoubleSolenoid(PneumaticsModuleType.REVPH, 8,9);
+//}
+
+//Override
+//public void testPeriodic() {
+    // TODO Auto-generated method stub
+  //  super.testPeriodic();
+    //if (driver1.getAButton()) {
+      //  exampleSolenoidPH.set(Value.kForward);
+    //} else {
+ //exampleSolenoidPH.set(Value.kReverse);
+   // }
+ 
+//}
+//@Override
+//public void testExit() {
+    // TODO Auto-generated method stub
+   // super.testExit();
+    //exampleSolenoidPH.close();
+//}
 }//end of timed robot class
