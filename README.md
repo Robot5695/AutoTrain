@@ -1,3 +1,2 @@
 # AutoTrain
-Github is REALLY confusing
-This is working (kinda)
+We have figured out GitHub we are omniscient 
