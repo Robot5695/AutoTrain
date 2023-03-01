@@ -287,7 +287,7 @@ rotations-=0.01;
  */
 
 if(Math.abs(driver2.getLeftY())>0.2){
-  rotations=rotations+driver2.getLeftY()*0.04;
+  rotations=rotations+driver2.getLeftY()*0.2;
 } 
 
 /*
@@ -296,15 +296,15 @@ if(Math.abs(driver2.getLeftY())>0.2){
 if(rotations<0){
   rotations=0;
 }
-if(rotations>5){
-  rotations=5;
+if(rotations>25){
+  rotations=25;
 }
 /*
  * This code controls the extender with the left stick up/down
  */
 
  if(Math.abs(driver2.getRightY())>0.2){
-  extenderrotations=extenderrotations+driver2.getRightY()*0.16;
+  extenderrotations=extenderrotations+driver2.getRightY()*0.8;
 } 
 
 /*
@@ -313,8 +313,8 @@ if(rotations>5){
 if(extenderrotations<0){
   extenderrotations=0;
 }
-if(extenderrotations>75){
-  extenderrotations=75;
+if(extenderrotations>335){
+  extenderrotations=335;
   //MUST MATCH THE ABOVE NUMBER
 }
 
@@ -344,7 +344,16 @@ if(extenderrotations>75){
 
 }
 
+@Override
+public void testExit() {
+    // TODO Auto-generated method stub
+    super.testExit();
 
+    extenderEncoder.setPosition(0);
+    armEncoder.setPosition(0);
+    extenderrotations=0;
+    rotations=0;
+}
 
 
 
