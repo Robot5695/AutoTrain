@@ -363,28 +363,28 @@ else {
 
 
 
-//* @Override
-//public void testInit() {
-    // TODO Auto-generated method stub
-    //super.testInit();
-  //  exampleSolenoidPH = new DoubleSolenoid(PneumaticsModuleType.REVPH, 8,9);
-//}
+ @Override
+public void testInit() {
+     //TODO Auto-generated method stub
+    super.testInit();
+    exampleSolenoidPH = new DoubleSolenoid(PneumaticsModuleType.REVPH, 8,9);
+}
 
-//Override
-//public void testPeriodic() {
-    // TODO Auto-generated method stub
-  //  super.testPeriodic();
-    //if (driver1.getAButton()) {
-      //  exampleSolenoidPH.set(Value.kForward);
-    //} else {
- //exampleSolenoidPH.set(Value.kReverse);
-   // }
+@Override
+public void testPeriodic() {
+     //TODO Auto-generated method stub
+    super.testPeriodic();
+    if (driver1.getAButton()) {
+        exampleSolenoidPH.set(Value.kForward);
+    } else {
+ exampleSolenoidPH.set(Value.kReverse);
+    }
  
-//}
-//@Override
-//public void testExit() {
-    // TODO Auto-generated method stub
-   // super.testExit();
-    //exampleSolenoidPH.close();
-//}
+}
+@Override
+public void testExit() {
+     //TODO Auto-generated method stub
+    super.testExit();
+    exampleSolenoidPH.close();
+}
 }//end of timed robot class
